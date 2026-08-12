@@ -10,7 +10,11 @@ public interface IDocumentSearchView
     /// <summary>Destaca todas as ocorrências e devolve quantas foram encontradas.</summary>
     int Highlight(string term);
 
-    /// <summary>Traz a ocorrência de índice <paramref name="index"/> para a área visível.</summary>
+    /// <summary>
+    /// Marca a ocorrência de índice <paramref name="index"/> como a corrente — com destaque
+    /// distinto das demais, devolvendo a anterior ao destaque comum — e a traz para a área
+    /// visível.
+    /// </summary>
     void GoToResult(int index);
 
     /// <summary>Remove os destaques e devolve o documento ao estado original.</summary>

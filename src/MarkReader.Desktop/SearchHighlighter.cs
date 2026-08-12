@@ -7,6 +7,17 @@ using ColorTextBlock.Avalonia;
 
 namespace MarkReader.Desktop;
 
+/// <summary>Cores do destaque de busca, resolvidas pelo tema ativo.</summary>
+/// <param name="Background">Fundo das ocorrências.</param>
+/// <param name="Foreground">Texto das ocorrências.</param>
+/// <param name="CurrentBackground">Fundo da ocorrência corrente.</param>
+/// <param name="CurrentForeground">Texto da ocorrência corrente.</param>
+internal sealed record SearchPalette(
+    IBrush Background,
+    IBrush Foreground,
+    IBrush CurrentBackground,
+    IBrush CurrentForeground);
+
 /// <summary>
 /// Destaca ocorrências no documento renderizado pelo Markdown.Avalonia.
 /// O texto ali é desenhado por <see cref="CTextBlock"/> / <see cref="CRun"/> do
@@ -17,7 +28,10 @@ internal sealed class SearchHighlighter
 {
     private readonly Func<Control?> _documentRoot;
     private readonly List<BlockSnapshot> _snapshots = new();
-    private readonly List<CTextBlock> _matchBlocks = new();
+    private readonly List<Match> _matches = new();
+
+    private SearchPalette? _palette;
+    private int _currentIndex = -1;
 
     public SearchHighlighter(Func<Control?> documentRoot) => _documentRoot = documentRoot;
 
@@ -36,10 +50,16 @@ internal sealed class SearchHighlighter
         CInline.TextVerticalAlignmentProperty
     };
 
-    public int Highlight(string term, IBrush background, IBrush foreground)
+    /// <summary>
+    /// A paleta inteira entra aqui — inclusive as cores da ocorrência corrente — para que
+    /// destacar e navegar nunca misturem cores de temas diferentes.
+    /// </summary>
+    public int Highlight(string term, SearchPalette palette)
     {
         Clear();
         if (string.IsNullOrEmpty(term)) return 0;
+
+        _palette = palette;
 
         if (_documentRoot() is not { } root) return 0;
 
@@ -49,23 +69,39 @@ internal sealed class SearchHighlighter
             if (!ContainsTerm(block.Text, term)) continue;
 
             var snapshot = new BlockSnapshot(block, content.ToArray());
-            int before = _matchBlocks.Count;
+            int before = _matches.Count;
 
-            HighlightInlines(content, term, background, foreground, block, snapshot);
+            HighlightInlines(content, term, palette, block, snapshot);
 
             // Termo que cruza fronteira de formatação (buscar "bold" em "**bo**ld") casa no
             // texto do bloco mas em nenhum run: sem match, não há o que restaurar depois.
-            if (_matchBlocks.Count > before)
+            if (_matches.Count > before)
                 _snapshots.Add(snapshot);
         }
 
-        return _matchBlocks.Count;
+        return _matches.Count;
     }
 
+    /// <summary>
+    /// Marca a ocorrência de índice <paramref name="index"/> como a corrente — devolvendo a
+    /// anterior ao destaque comum — e rola até o bloco que a contém.
+    /// </summary>
     public void GoToResult(int index)
     {
-        if (index < 0 || index >= _matchBlocks.Count) return;
-        _matchBlocks[index].BringIntoView();
+        if (index < 0 || index >= _matches.Count || _palette is not { } palette) return;
+
+        RepaintCurrentAsNormal();
+
+        _currentIndex = index;
+        _matches[index].Paint(palette.CurrentBackground, palette.CurrentForeground);
+        _matches[index].Block.BringIntoView();
+    }
+
+    private void RepaintCurrentAsNormal()
+    {
+        if (_currentIndex < 0 || _currentIndex >= _matches.Count || _palette is not { } palette) return;
+
+        _matches[_currentIndex].Paint(palette.Background, palette.Foreground);
     }
 
     public void Clear()
@@ -80,14 +116,15 @@ internal sealed class SearchHighlighter
         }
 
         _snapshots.Clear();
-        _matchBlocks.Clear();
+        _matches.Clear();
+        _currentIndex = -1;
+        _palette = null;
     }
 
     private void HighlightInlines(
         IList<CInline> inlines,
         string term,
-        IBrush background,
-        IBrush foreground,
+        SearchPalette palette,
         CTextBlock block,
         BlockSnapshot snapshot)
     {
@@ -98,12 +135,12 @@ internal sealed class SearchHighlighter
                 case CSpan span:
                     var children = span.Content?.ToList() ?? new List<CInline>();
                     snapshot.Spans.Add((span, children.ToArray()));
-                    HighlightInlines(children, term, background, foreground, block, snapshot);
+                    HighlightInlines(children, term, palette, block, snapshot);
                     span.Content = children;
                     break;
 
                 case CRun run when ContainsTerm(run.Text, term):
-                    var pieces = SplitOnTerm(run, term, background, foreground, block);
+                    var pieces = SplitOnTerm(run, term, palette, block);
                     inlines.RemoveAt(i);
                     foreach (var piece in pieces)
                         inlines.Insert(i++, piece);
@@ -117,7 +154,7 @@ internal sealed class SearchHighlighter
     /// Quebra o run nas fronteiras do termo. O run original nunca é mutado — os pedaços são
     /// runs novos, e por isso o snapshot restaura o conteúdo exato ao limpar a busca.
     /// </summary>
-    private List<CInline> SplitOnTerm(CRun run, string term, IBrush background, IBrush foreground, CTextBlock block)
+    private List<CInline> SplitOnTerm(CRun run, string term, SearchPalette palette, CTextBlock block)
     {
         var text = run.Text;
         var pieces = new List<CInline>();
@@ -129,10 +166,10 @@ internal sealed class SearchHighlighter
                 pieces.Add(CopyStyle(run, new CRun { Text = text[cursor..found] }));
 
             var match = CopyStyle(run, new CRun { Text = text.Substring(found, term.Length) });
-            match.Background = background;
-            match.Foreground = foreground;
+            match.Background = palette.Background;
+            match.Foreground = palette.Foreground;
             pieces.Add(match);
-            _matchBlocks.Add(block);
+            _matches.Add(new Match(block, match));
 
             cursor = found + term.Length;
         }
@@ -160,6 +197,15 @@ internal sealed class SearchHighlighter
 
     private static int IndexOfTerm(string text, string term, int start) =>
         start > text.Length ? -1 : text.IndexOf(term, start, StringComparison.OrdinalIgnoreCase);
+
+    private sealed record Match(CTextBlock Block, CRun Run)
+    {
+        public void Paint(IBrush background, IBrush foreground)
+        {
+            Run.Background = background;
+            Run.Foreground = foreground;
+        }
+    }
 
     private sealed record BlockSnapshot(CTextBlock Block, CInline[] RootContent)
     {

@@ -15,6 +15,11 @@ public partial class MainWindow : Window, IDocumentSearchView
     private readonly MainViewModel _viewModel;
     private readonly SearchHighlighter _highlighter;
 
+    private const string HighlightBackgroundKey = "SearchHighlightBrush";
+    private const string HighlightForegroundKey = "SearchHighlightForegroundBrush";
+    private const string CurrentBackgroundKey = "SearchCurrentBrush";
+    private const string CurrentForegroundKey = "SearchCurrentForegroundBrush";
+
     // Required for Avalonia XAML loader
     public MainWindow()
     {
@@ -146,13 +151,7 @@ public partial class MainWindow : Window, IDocumentSearchView
 
     // ── IDocumentSearchView ──────────────────────────────────────────
 
-    public int Highlight(string term)
-    {
-        var background = HighlightBrush("SearchHighlightBrush", Colors.Gold);
-        var foreground = HighlightBrush("SearchHighlightForegroundBrush", Colors.Black);
-
-        return _highlighter.Highlight(term, background, foreground);
-    }
+    public int Highlight(string term) => _highlighter.Highlight(term, CurrentPalette());
 
     public void GoToResult(int index) => _highlighter.GoToResult(index);
 
@@ -164,9 +163,20 @@ public partial class MainWindow : Window, IDocumentSearchView
         if (_viewModel.SearchResultCount == 0) return;
 
         var index = _viewModel.CurrentSearchIndex;
-        Highlight(_viewModel.SearchQuery);
-        GoToResult(index);
+
+        // O termo pode ter mudado desde o último destaque (busca em voo): a contagem
+        // que volta é a verdadeira, senão o índice guardado pode cair fora de faixa.
+        _viewModel.SearchResultCount = Highlight(_viewModel.SearchQuery);
+
+        if (index < _viewModel.SearchResultCount)
+            GoToResult(index);
     }
+
+    private SearchPalette CurrentPalette() => new(
+        HighlightBrush(HighlightBackgroundKey, Color.Parse("#FFD54F")),
+        HighlightBrush(HighlightForegroundKey, Color.Parse("#1F2328")),
+        HighlightBrush(CurrentBackgroundKey, Color.Parse("#C2410C")),
+        HighlightBrush(CurrentForegroundKey, Colors.White));
 
     private IBrush HighlightBrush(string resourceKey, Color fallback) =>
         this.TryFindResource(resourceKey, ActualThemeVariant, out var found) && found is IBrush brush

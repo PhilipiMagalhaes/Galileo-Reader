@@ -10,6 +10,11 @@
                     <!-- Destaque de busca: âmbar sobre texto quase preto (paleta definitiva na fase 6) -->
                     <SolidColorBrush x:Key="SearchHighlightBrush" Color="#FFD54F" />
                     <SolidColorBrush x:Key="SearchHighlightForegroundBrush" Color="#1F2328" />
+                    <!-- Ocorrência corrente: laranja escuro com texto claro. A inversão de
+                         luminosidade é a pista, não a matiz — âmbar × laranja se confundem
+                         em protanopia/deuteranopia. 3,70:1 contra o âmbar, 5,22:1 do texto. -->
+                    <SolidColorBrush x:Key="SearchCurrentBrush" Color="#C2410C" />
+                    <SolidColorBrush x:Key="SearchCurrentForegroundBrush" Color="#FFFFFF" />
                 </ResourceDictionary>
 
                 <!-- Ajuste do Tema Escuro para um cinza mais suave (estilo Windows) em vez de preto puro -->
@@ -20,6 +25,9 @@
                     <!-- Amarelo puro fere no escuro: âmbar rebaixado mantém a marca visível sem ofuscar -->
                     <SolidColorBrush x:Key="SearchHighlightBrush" Color="#B8860B" />
                     <SolidColorBrush x:Key="SearchHighlightForegroundBrush" Color="#FFFFFF" />
+                    <!-- Ocorrência corrente: mais clara que as demais, para saltar no escuro -->
+                    <SolidColorBrush x:Key="SearchCurrentBrush" Color="#E8A33D" />
+                    <SolidColorBrush x:Key="SearchCurrentForegroundBrush" Color="#1A1400" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>

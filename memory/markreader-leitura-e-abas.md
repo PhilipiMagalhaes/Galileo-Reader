@@ -116,7 +116,18 @@
       bate com o número de marcas, e apagar o termo devolve o texto ao original (sem
       resíduo de cor nem duplicação).
 
-- [ ] **Fase 3 — Navegação entre resultados.** Marca distinta para o resultado corrente
+- [x] **Fase 3 — Navegação entre resultados.** (feita em 2026-08-12. `SearchHighlighter`
+      passou a guardar a ocorrência — `CTextBlock` + `CRun` — em vez de só o bloco, e a
+      paleta inteira entra numa `SearchPalette` única, para destacar e navegar nunca
+      misturarem cores de temas diferentes. Achado do revisor corrigido: Enter dentro dos
+      180 ms do debounce aplicava o passo **por cima** da busca que acabara de posicionar
+      na 1ª ocorrência, pulando-a — exercitado no gate visual, hoje marca "1 de 10". A cor
+      da corrente no claro virou `#C2410C` com texto branco: o `#FF8F00` anterior dava só
+      **1,62:1** contra o âmbar e mantinha o mesmo texto, pista que some em
+      protanopia/deuteranopia; agora são 3,70:1 de fundo e 5,22:1 de texto, com inversão
+      de luminosidade como pista principal. Gate visual: a marca corrente percorre
+      x=[128..254] → [186..226] → [424..462], incluindo duas ocorrências do mesmo
+      parágrafo, sempre uma só por vez, e sobrevive à troca de tema.) Marca distinta para o resultado corrente
       (cor de destaque + foco), Enter/Shift+Enter e ◀/▶ percorrendo, e scroll levando o
       resultado à viewport pelo `CTextBlock` real (`TranslatePoint` para o conteúdo do
       `ScrollViewer` / `BringIntoView`), aposentando a estimativa por número de linha.
@@ -159,6 +170,11 @@
   Medido na Fase 2 (8 de 9 ocorrências do documento de amostra).
 - **Termo que cruza fronteira de formatação não casa** (buscar `bold` em `**bo**ld`):
   são runs distintos. Coerente com o contador, mas é uma limitação real.
+- **O scroll da navegação vai ao bloco que contém a ocorrência, não à ocorrência.**
+  `TextPointer` não é público na raiz do ColorTextBlock.Avalonia, então a coordenada
+  exata dentro do bloco não está acessível. Num parágrafo mais alto que a viewport, a
+  ocorrência corrente pode ficar fora da área visível mesmo com o bloco à vista — o
+  critério da Fase 3 ("sempre dentro da área visível") vale para blocos de altura normal.
 - **Feat futura (pedido do usuário):** seletor de fonte e tamanho de texto nas
   preferências, persistido em `settings.json` — fora do escopo deste plano.
 - Persistir e restaurar abas abertas entre execuções (ver Perguntas ao negócio).
@@ -170,4 +186,4 @@
 - `error_log.txt` (vazio) na raiz: entra no `.gitignore` na Fase 1; se for artefato de
   runtime, deveria gravar em `%AppData%\MarkReader` junto do `settings.json`.
 
-▶ PRÓXIMO: Fase 3 — navegação entre resultados (marca do corrente + scroll real)
+▶ PRÓXIMO: Fase 4 — abas multi-arquivo

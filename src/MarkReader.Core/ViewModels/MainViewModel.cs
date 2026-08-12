@@ -162,9 +162,13 @@ public partial class MainViewModel : ObservableObject
 
     private void MoveResult(int step)
     {
-        // Enter logo após digitar não pode esperar a pausa do debounce
+        // Enter logo após digitar não espera a pausa do debounce — e a busca que acabou de
+        // rodar já posiciona na 1ª ocorrência, então aplicar o passo por cima pularia ela.
         if (_pendingSearch != null)
+        {
             ExecuteSearch();
+            return;
+        }
 
         if (SearchResultCount == 0) return;
 
