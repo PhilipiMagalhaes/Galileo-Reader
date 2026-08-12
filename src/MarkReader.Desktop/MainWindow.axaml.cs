@@ -5,6 +5,8 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.Media;
+using Avalonia.VisualTree;
+using Markdown.Avalonia;
 using MarkReader.Core.Services;
 using MarkReader.Core.ViewModels;
 
@@ -34,7 +36,7 @@ public partial class MainWindow : Window, IDocumentSearchView
         _viewModel = viewModel;
         DataContext = viewModel;
 
-        _highlighter = new SearchHighlighter(() => this.FindControl<Control>("MarkdownScrollViewer"));
+        _highlighter = new SearchHighlighter(ActiveDocumentViewer);
 
         // Wire up file dialog request
         _viewModel.OpenFileDialogRequested += OpenFileDialogAsync;
@@ -55,6 +57,10 @@ public partial class MainWindow : Window, IDocumentSearchView
 
         // Keyboard shortcuts
         KeyDown += OnKeyDown;
+
+        // Ctrl+Tab tem de ser interceptado no tunelamento: o Avalonia consome o Tab para
+        // navegação de foco antes de o evento borbulhar até a janela.
+        AddHandler(KeyDownEvent, OnTunneledKeyDown, RoutingStrategies.Tunnel);
 
         // Drag & drop support
         AddHandler(DragDrop.DropEvent, OnDrop);
@@ -91,6 +97,10 @@ public partial class MainWindow : Window, IDocumentSearchView
                     _viewModel.ToggleThemeCommand.Execute(null);
                     e.Handled = true;
                     break;
+                case Key.W:
+                    _viewModel.CloseCurrentDocumentCommand.Execute(null);
+                    e.Handled = true;
+                    break;
             }
         }
         else if (e.KeyModifiers == KeyModifiers.None)
@@ -111,6 +121,22 @@ public partial class MainWindow : Window, IDocumentSearchView
             _viewModel.PreviousResultCommand.Execute(null);
             e.Handled = true;
         }
+    }
+
+    private void OnTunneledKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Tab || _viewModel.OpenDocuments.Count < 2) return;
+
+        // Modificadores exatos: Ctrl+Alt+Tab não é atalho de aba, e sem abas suficientes
+        // o Tab continua sendo navegação de foco.
+        if (e.KeyModifiers == KeyModifiers.Control)
+            _viewModel.SelectNextDocumentCommand.Execute(null);
+        else if (e.KeyModifiers == (KeyModifiers.Control | KeyModifiers.Shift))
+            _viewModel.SelectPreviousDocumentCommand.Execute(null);
+        else
+            return;
+
+        e.Handled = true;
     }
 
     private void FocusSearchBox()
@@ -148,6 +174,19 @@ public partial class MainWindow : Window, IDocumentSearchView
         var result = await StorageProvider.OpenFilePickerAsync(options);
         return result?.Count > 0 ? result[0].TryGetLocalPath() : null;
     }
+
+    /// <summary>
+    /// O visualizador da aba da frente. Buscar na subárvore inteira do host desceria por
+    /// cada aba escondida antes de achar a certa — custo que cresce com o número de abas.
+    /// Aqui só a aba ativa é percorrida.
+    /// </summary>
+    private Control? ActiveDocumentViewer() =>
+        this.FindControl<ItemsControl>("DocumentHost")?
+            .GetRealizedContainers()
+            .FirstOrDefault(container => ReferenceEquals(container.DataContext, _viewModel.SelectedDocument))?
+            .GetVisualDescendants()
+            .OfType<MarkdownScrollViewer>()
+            .FirstOrDefault();
 
     // ── IDocumentSearchView ──────────────────────────────────────────
 
@@ -197,12 +236,14 @@ public partial class MainWindow : Window, IDocumentSearchView
         var files = e.Data.GetFiles();
         if (files == null) return;
 
+        // N arquivos soltos = N abas
         var dropped = files
             .Select(file => file.TryGetLocalPath())
-            .FirstOrDefault(path => path != null && IsMarkdownFile(path));
+            .OfType<string>()
+            .Where(IsMarkdownFile);
 
-        if (dropped != null)
-            await _viewModel.LoadFileAsync(dropped);
+        foreach (var path in dropped)
+            await _viewModel.LoadFileAsync(path);
     }
 
     private static bool IsMarkdownFile(string path)

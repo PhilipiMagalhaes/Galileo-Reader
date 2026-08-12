@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MarkReader.Core.Services;
@@ -19,11 +20,11 @@ public partial class MainViewModel : ObservableObject
 
     private CancellationTokenSource? _pendingSearch;
 
-    [ObservableProperty]
-    private string _markdownContent = string.Empty;
+    public ObservableCollection<DocumentViewModel> OpenDocuments { get; } = new();
 
     [ObservableProperty]
-    private string _currentFilePath = string.Empty;
+    [NotifyPropertyChangedFor(nameof(HasActiveDocument))]
+    private DocumentViewModel? _selectedDocument;
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -37,7 +38,7 @@ public partial class MainViewModel : ObservableObject
     private int _currentSearchIndex = -1;
 
     [ObservableProperty]
-    private bool _isSearchVisible = false;
+    private bool _isSearchVisible;
 
     [ObservableProperty]
     private bool _isDarkTheme;
@@ -45,14 +46,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "Abra um arquivo Markdown para começar";
 
-    [ObservableProperty]
-    private string _fileName = string.Empty;
-
-    [ObservableProperty]
-    private string _fileSizeText = string.Empty;
-
     // Event to open file dialog (implemented at UI layer)
     public event Func<Task<string?>>? OpenFileDialogRequested;
+
+    public bool HasActiveDocument => SelectedDocument != null;
 
     public string SearchCountText =>
         SearchResultCount == 0 ? "Sem resultados" :
@@ -92,23 +89,25 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Caminho único de abertura — diálogo e arrastar-e-soltar passam por aqui.
-    /// Trocar o documento por fora deixaria a busca contando ocorrências de um texto
-    /// que não está mais na tela.
+    /// Arquivo já aberto ativa a aba existente em vez de duplicá-la.
     /// </summary>
     public async Task LoadFileAsync(string path)
     {
+        if (OpenDocuments.FirstOrDefault(document => document.HasPath(path)) is { } alreadyOpen)
+        {
+            SelectedDocument = alreadyOpen;
+            StatusMessage = $"Já aberto: {alreadyOpen.FileName}";
+            return;
+        }
+
         try
         {
             var content = await Task.Run(() => _markdownService.LoadMarkdown(path));
+            var document = new DocumentViewModel(path, content, new FileInfo(path).Length);
 
-            IsSearchVisible = false;
-            ResetSearch();
-
-            MarkdownContent = content;
-            CurrentFilePath = path;
-            FileName = Path.GetFileName(path);
-            FileSizeText = FormatFileSize(new FileInfo(path).Length);
-            StatusMessage = $"Arquivo carregado: {FileName}";
+            OpenDocuments.Add(document);
+            SelectedDocument = document;
+            StatusMessage = $"Arquivo carregado: {document.FileName}";
         }
         catch (Exception ex)
         {
@@ -116,14 +115,68 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private static string FormatFileSize(long size) =>
-        size < 1024 ? $"{size} B"
-        : size < 1024 * 1024 ? $"{size / 1024.0:F1} KB"
-        : $"{size / (1024.0 * 1024):F1} MB";
+    [RelayCommand]
+    public void CloseDocument(DocumentViewModel? document)
+    {
+        if (document == null || !OpenDocuments.Contains(document)) return;
+
+        if (SelectedDocument == document)
+            SelectedDocument = NeighbourOf(document);
+
+        OpenDocuments.Remove(document);
+    }
+
+    /// <summary>
+    /// A vizinha da direita; na última aba, a da esquerda. Escolhida <b>antes</b> da remoção:
+    /// tirar da coleção um item selecionado faz o ListBox reeleger a seleção sozinho, e o
+    /// estado passaria por um valor intermediário que pisca a tira de abas e o empty state.
+    /// </summary>
+    private DocumentViewModel? NeighbourOf(DocumentViewModel document)
+    {
+        if (OpenDocuments.Count <= 1) return null;
+
+        int index = OpenDocuments.IndexOf(document);
+        return OpenDocuments[index == OpenDocuments.Count - 1 ? index - 1 : index + 1];
+    }
+
+    [RelayCommand]
+    public void CloseCurrentDocument() => CloseDocument(SelectedDocument);
+
+    [RelayCommand]
+    public void SelectNextDocument() => MoveSelection(+1);
+
+    [RelayCommand]
+    public void SelectPreviousDocument() => MoveSelection(-1);
+
+    private void MoveSelection(int step)
+    {
+        if (OpenDocuments.Count < 2 || SelectedDocument == null) return;
+
+        int index = OpenDocuments.IndexOf(SelectedDocument);
+        SelectedDocument = OpenDocuments[(index + step + OpenDocuments.Count) % OpenDocuments.Count];
+    }
+
+    partial void OnSelectedDocumentChanged(DocumentViewModel? oldValue, DocumentViewModel? newValue)
+    {
+        if (oldValue != null) oldValue.IsActive = false;
+        if (newValue != null) newValue.IsActive = true;
+
+        // O status fala sempre da aba da frente; quem abre sobrescreve com a própria mensagem.
+        StatusMessage = newValue == null
+            ? "Abra um arquivo Markdown para começar"
+            : $"Lendo: {newValue.FileName}";
+
+        // A busca é do documento da frente: trocar de aba não pode levar junto a contagem
+        // nem os destaques do documento anterior.
+        IsSearchVisible = false;
+        ResetSearch();
+    }
 
     [RelayCommand]
     public void ToggleSearch()
     {
+        if (!HasActiveDocument) return;
+
         IsSearchVisible = !IsSearchVisible;
         if (!IsSearchVisible)
             ResetSearch();
@@ -141,7 +194,7 @@ public partial class MainViewModel : ObservableObject
     {
         CancelPendingSearch();
 
-        if (string.IsNullOrEmpty(MarkdownContent) || string.IsNullOrWhiteSpace(SearchQuery))
+        if (!HasActiveDocument || string.IsNullOrWhiteSpace(SearchQuery))
         {
             ResetSearch();
             return;

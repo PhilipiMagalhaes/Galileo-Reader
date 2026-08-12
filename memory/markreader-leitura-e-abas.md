@@ -135,8 +135,19 @@
       resultado corrente aparece sempre dentro da área visível, destacado diferente dos
       demais.
 
-- [ ] **Fase 4 — Abas multi-arquivo.** `DocumentViewModel` (caminho, nome, conteúdo,
-      tamanho, posição de leitura) + `ObservableCollection<DocumentViewModel>` e
+- [x] **Fase 4 — Abas multi-arquivo.** (feita em 2026-08-12. Dois defeitos pegos só no
+      gate visual, invisíveis para os testes: **Ctrl+Tab não funcionava** — o Avalonia
+      consome o Tab para navegação de foco antes de o evento borbulhar até a janela, então
+      passou a ser interceptado no **tunelamento**; e a barra de status **continuava
+      falando da aba já fechada**, corrigido fazendo o status seguir sempre a aba da
+      frente. Achados do revisor aplicados: `CloseDocument` agora escolhe a vizinha
+      **antes** de remover — remover o item selecionado fazia o `ListBox` reeleger a
+      seleção sozinho e o estado passava por um valor intermediário; `ActiveDocumentViewer`
+      usa os containers realizados em vez de varrer a árvore inteira, senão cada busca
+      descia pelas abas escondidas; evento `ActiveDocumentChanged` removido por ser um
+      segundo canal que só repetia o que o `ResetSearch` já fazia. Gate visual cobriu
+      também fechar aba de fundo pelo ✕ com busca ativa na aba da frente: seleção e busca
+      sobrevivem.) `DocumentViewModel` (caminho, nome, conteúdo, tamanho) + `ObservableCollection<DocumentViewModel>` e
       `SelectedDocument` na `MainViewModel`; caminho único de abertura (diálogo, Ctrl+O e
       drag&drop convergindo nele, com N arquivos = N abas); cabeçalho com nome do arquivo
       + botão ✕ e tooltip do caminho completo; arquivo já aberto ativa a aba existente;
@@ -175,6 +186,11 @@
   exata dentro do bloco não está acessível. Num parágrafo mais alto que a viewport, a
   ocorrência corrente pode ficar fora da área visível mesmo com o bloco à vista — o
   critério da Fase 3 ("sempre dentro da área visível") vale para blocos de altura normal.
+- **Abas não têm limite e cada uma segura um documento parseado e vivo** — é o preço
+  explícito de não re-parsear ao trocar de aba (Fase 4). Com muitos arquivos grandes
+  abertos isso pesa; não há teto nem descarte.
+- `FileService`/`IFileService` não têm nenhum consumidor no repo, assim como o
+  `Markdig`/`ConvertToHtml`. Limpeza pendente de resposta do negócio.
 - **Feat futura (pedido do usuário):** seletor de fonte e tamanho de texto nas
   preferências, persistido em `settings.json` — fora do escopo deste plano.
 - Persistir e restaurar abas abertas entre execuções (ver Perguntas ao negócio).
@@ -186,4 +202,4 @@
 - `error_log.txt` (vazio) na raiz: entra no `.gitignore` na Fase 1; se for artefato de
   runtime, deveria gravar em `%AppData%\MarkReader` junto do `settings.json`.
 
-▶ PRÓXIMO: Fase 4 — abas multi-arquivo
+▶ PRÓXIMO: Fase 5 — aba nova abre no topo, aba já aberta restaura a posição

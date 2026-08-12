@@ -59,6 +59,35 @@
             <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
         </Style>
 
+        <!-- ── Abas ──────────────────────────────────────────── -->
+        <Style Selector="ListBox.tab-strip">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="ListBox.tab-strip ListBoxItem">
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="Margin" Value="0,0,2,0"/>
+            <Setter Property="CornerRadius" Value="6,6,0,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="ListBox.tab-strip ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltHighBrush}"/>
+        </Style>
+
+        <Style Selector="Button.tab-close">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.tab-close:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListMediumBrush}"/>
+        </Style>
+
     </Window.Styles>
 
     <DockPanel>
@@ -99,6 +128,7 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
                     <Button Classes="toolbar-btn"
                             x:Name="SearchToggleButton"
+                            IsEnabled="{Binding HasActiveDocument}"
                             ToolTip.Tip="Buscar no documento (Ctrl+F)"
                             Command="{Binding ToggleSearchCommand}">
                         <TextBlock Text="🔍" FontSize="16"/>
@@ -114,6 +144,46 @@
         </Border>
 
         <!-- ═══════════════════════════════════════════════
+             ABAS
+        ════════════════════════════════════════════════════ -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding HasActiveDocument}"
+                Padding="10,4,10,0"
+                BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                Background="{DynamicResource SystemControlPageBackgroundAltHighBrush}">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled">
+                <ListBox Classes="tab-strip"
+                         x:Name="TabStrip"
+                         ItemsSource="{Binding OpenDocuments}"
+                         SelectedItem="{Binding SelectedDocument, Mode=TwoWay}">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{Binding FileName}"
+                                           VerticalAlignment="Center"
+                                           FontSize="13"
+                                           ToolTip.Tip="{Binding FilePath}"/>
+                                <Button Classes="tab-close"
+                                        ToolTip.Tip="Fechar aba (Ctrl+W)"
+                                        Command="{Binding $parent[ListBox].DataContext.CloseDocumentCommand}"
+                                        CommandParameter="{Binding}">
+                                    <TextBlock Text="✕"/>
+                                </Button>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </ScrollViewer>
+        </Border>
+
+        <!-- ═══════════════════════════════════════════════
              STATUS BAR
         ════════════════════════════════════════════════════ -->
         <Border DockPanel.Dock="Bottom"
@@ -123,11 +193,11 @@
             <Grid ColumnDefinitions="*,Auto,Auto">
                 <TextBlock Grid.Column="0" Classes="status" Text="{Binding StatusMessage}"/>
                 <TextBlock Grid.Column="1" Classes="status" Margin="0,0,16,0"
-                           Text="{Binding FileName}"
-                           IsVisible="{Binding FileName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                           Text="{Binding SelectedDocument.FileName}"
+                           IsVisible="{Binding HasActiveDocument}"/>
                 <TextBlock Grid.Column="2" Classes="status"
-                           Text="{Binding FileSizeText}"
-                           IsVisible="{Binding FileSizeText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                           Text="{Binding SelectedDocument.FileSizeText}"
+                           IsVisible="{Binding HasActiveDocument}"/>
             </Grid>
         </Border>
 
@@ -191,7 +261,7 @@
         <Grid>
             <!-- Drop zone / empty state -->
             <Border x:Name="EmptyState"
-                    IsVisible="{Binding MarkdownContent, Converter={x:Static StringConverters.IsNullOrEmpty}}"
+                    IsVisible="{Binding !HasActiveDocument}"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center">
                 <StackPanel Spacing="16" HorizontalAlignment="Center">
@@ -213,18 +283,29 @@
                 </StackPanel>
             </Border>
 
-            <!-- Markdown viewer -->
-            <ScrollViewer x:Name="ContentScrollViewer"
-                          IsVisible="{Binding MarkdownContent, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                          HorizontalScrollBarVisibility="Disabled"
-                          VerticalScrollBarVisibility="Auto">
-                <md:MarkdownScrollViewer x:Name="MarkdownScrollViewer"
-                              Markdown="{Binding MarkdownContent}"
-                              Margin="40,32"
-                              MaxWidth="860"
-                              HorizontalAlignment="Center"
-                />
-            </ScrollViewer>
+            <!-- Um visualizador vivo por aba, empilhados: trocar de aba esconde e mostra,
+                 sem re-parsear o markdown nem perder a posição de leitura. -->
+            <ItemsControl x:Name="DocumentHost"
+                          ItemsSource="{Binding OpenDocuments}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <Grid/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <ScrollViewer IsVisible="{Binding IsActive}"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Auto">
+                            <md:MarkdownScrollViewer Markdown="{Binding MarkdownContent}"
+                                          Margin="40,32"
+                                          MaxWidth="860"
+                                          HorizontalAlignment="Center"
+                            />
+                        </ScrollViewer>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </Grid>
 
     </DockPanel>
