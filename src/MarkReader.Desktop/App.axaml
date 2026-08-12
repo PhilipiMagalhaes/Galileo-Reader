@@ -6,11 +6,20 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <!-- Destaque de busca: âmbar sobre texto quase preto (paleta definitiva na fase 6) -->
+                    <SolidColorBrush x:Key="SearchHighlightBrush" Color="#FFD54F" />
+                    <SolidColorBrush x:Key="SearchHighlightForegroundBrush" Color="#1F2328" />
+                </ResourceDictionary>
+
                 <!-- Ajuste do Tema Escuro para um cinza mais suave (estilo Windows) em vez de preto puro -->
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#202020" />
                     <SolidColorBrush x:Key="SystemControlPageBackgroundAltHighBrush" Color="#2B2B2B" />
                     <SolidColorBrush x:Key="SystemControlBackgroundBaseLowBrush" Color="#333333" />
+                    <!-- Amarelo puro fere no escuro: âmbar rebaixado mantém a marca visível sem ofuscar -->
+                    <SolidColorBrush x:Key="SearchHighlightBrush" Color="#B8860B" />
+                    <SolidColorBrush x:Key="SearchHighlightForegroundBrush" Color="#FFFFFF" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>

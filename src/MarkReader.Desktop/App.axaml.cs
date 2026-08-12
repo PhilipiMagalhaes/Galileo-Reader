@@ -19,10 +19,9 @@ public partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         var markdownService = new MarkdownService();
-        var searchService = new SearchService();
         var settingsService = new SettingsService();
 
-        ViewModel = new MainViewModel(markdownService, searchService, settingsService);
+        ViewModel = new MainViewModel(markdownService, settingsService);
 
         // Apply saved theme preference
         RequestedThemeVariant = settingsService.IsDarkTheme ? ThemeVariant.Dark : ThemeVariant.Light;

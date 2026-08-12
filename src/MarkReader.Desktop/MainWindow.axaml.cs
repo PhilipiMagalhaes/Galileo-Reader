@@ -4,23 +4,23 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
-using Avalonia.Controls.Documents;
 using Avalonia.Media;
 using MarkReader.Core.Services;
 using MarkReader.Core.ViewModels;
 
 namespace MarkReader.Desktop;
 
-public partial class MainWindow : Window
+public partial class MainWindow : Window, IDocumentSearchView
 {
     private readonly MainViewModel _viewModel;
+    private readonly SearchHighlighter _highlighter;
 
     // Required for Avalonia XAML loader
     public MainWindow()
     {
         InitializeComponent();
         _viewModel = null!; // Dummy for designer
+        _highlighter = null!;
     }
 
     public MainWindow(MainViewModel viewModel)
@@ -29,31 +29,22 @@ public partial class MainWindow : Window
         _viewModel = viewModel;
         DataContext = viewModel;
 
+        _highlighter = new SearchHighlighter(() => this.FindControl<Control>("MarkdownScrollViewer"));
+
         // Wire up file dialog request
         _viewModel.OpenFileDialogRequested += OpenFileDialogAsync;
 
-        // Wire up scroll-to-result
-        _viewModel.ScrollToSearchResult += OnScrollToSearchResult;
+        // A busca opera sobre o documento renderizado — quem destaca e conta é esta janela
+        _viewModel.AttachSearchView(this);
 
-        // React to theme toggle and search changes
+        // React to theme toggle
         _viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(MainViewModel.IsDarkTheme))
             {
                 App.SetTheme(_viewModel.IsDarkTheme);
                 UpdateThemeIcon();
-            }
-            else if (e.PropertyName == nameof(MainViewModel.SearchQuery) || 
-                     e.PropertyName == nameof(MainViewModel.IsSearchVisible))
-            {
-                Dispatcher.UIThread.Post(() =>
-                {
-                    ClearHighlights();
-                    if (_viewModel.IsSearchVisible && !string.IsNullOrWhiteSpace(_viewModel.SearchQuery))
-                    {
-                        ApplyHighlights(_viewModel.SearchQuery);
-                    }
-                }, DispatcherPriority.Background);
+                RepaintHighlights();
             }
         };
 
@@ -153,27 +144,34 @@ public partial class MainWindow : Window
         return result?.Count > 0 ? result[0].TryGetLocalPath() : null;
     }
 
-    private void OnScrollToSearchResult(object? sender, SearchResult result)
+    // ── IDocumentSearchView ──────────────────────────────────────────
+
+    public int Highlight(string term)
     {
-        // Basic scroll: scroll the viewer proportionally based on line number
-        // Full highlight implementation would require custom rendering
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (this.FindControl<ScrollViewer>("ContentScrollViewer") is { } sv &&
-                sv.Extent.Height > 0)
-            {
-                // Estimate scroll position from line number (rough approximation)
-                var totalLines = _viewModel.MarkdownContent.Split('\n').Length;
-                if (totalLines > 0)
-                {
-                    var fraction = (double)(result.LineNumber - 1) / totalLines;
-                    sv.ScrollToEnd();
-                    var targetOffset = fraction * sv.Extent.Height;
-                    sv.Offset = sv.Offset.WithY(targetOffset);
-                }
-            }
-        }, DispatcherPriority.Render);
+        var background = HighlightBrush("SearchHighlightBrush", Colors.Gold);
+        var foreground = HighlightBrush("SearchHighlightForegroundBrush", Colors.Black);
+
+        return _highlighter.Highlight(term, background, foreground);
     }
+
+    public void GoToResult(int index) => _highlighter.GoToResult(index);
+
+    public void ClearHighlights() => _highlighter.Clear();
+
+    /// <summary>Trocar de tema troca os pinceis; sem repintar, o destaque fica com a cor antiga.</summary>
+    private void RepaintHighlights()
+    {
+        if (_viewModel.SearchResultCount == 0) return;
+
+        var index = _viewModel.CurrentSearchIndex;
+        Highlight(_viewModel.SearchQuery);
+        GoToResult(index);
+    }
+
+    private IBrush HighlightBrush(string resourceKey, Color fallback) =>
+        this.TryFindResource(resourceKey, ActualThemeVariant, out var found) && found is IBrush brush
+            ? brush
+            : new SolidColorBrush(fallback);
 
     private void OnDragOver(object? sender, DragEventArgs e)
     {
@@ -189,143 +187,17 @@ public partial class MainWindow : Window
         var files = e.Data.GetFiles();
         if (files == null) return;
 
-        foreach (var file in files)
-        {
-            var path = file.TryGetLocalPath();
-            if (path != null && IsMarkdownFile(path))
-            {
-                var content = await File.ReadAllTextAsync(path);
-                _viewModel.MarkdownContent = content;
-                _viewModel.CurrentFilePath = path;
-                _viewModel.FileName = Path.GetFileName(path);
-                var size = new FileInfo(path).Length;
-                _viewModel.FileSizeText = size < 1024 ? $"{size} B"
-                    : size < 1024 * 1024 ? $"{size / 1024.0:F1} KB"
-                    : $"{size / (1024.0 * 1024):F1} MB";
-                _viewModel.StatusMessage = $"Arquivo carregado: {_viewModel.FileName}";
-                break;
-            }
-        }
+        var dropped = files
+            .Select(file => file.TryGetLocalPath())
+            .FirstOrDefault(path => path != null && IsMarkdownFile(path));
+
+        if (dropped != null)
+            await _viewModel.LoadFileAsync(dropped);
     }
 
     private static bool IsMarkdownFile(string path)
     {
         var ext = Path.GetExtension(path).ToLowerInvariant();
         return ext is ".md" or ".markdown" or ".mdown" or ".mkd";
-    }
-
-    private void ClearHighlights()
-    {
-        var viewer = this.FindControl<Control>("MarkdownScrollViewer");
-        if (viewer == null) return;
-
-        var textBlocks = viewer.GetVisualDescendants().OfType<TextBlock>();
-        foreach (var run in textBlocks.SelectMany(GetRuns))
-        {
-            if (run.Background == Brushes.Yellow)
-            {
-                run.ClearValue(Run.BackgroundProperty);
-                run.ClearValue(Run.ForegroundProperty);
-            }
-        }
-    }
-
-    private IEnumerable<Run> GetRuns(TextBlock tb)
-    {
-        if (tb.Inlines != null)
-            return GetRunsFromInlines(tb.Inlines);
-        return Array.Empty<Run>();
-    }
-
-    private IEnumerable<Run> GetRunsFromInlines(InlineCollection inlines)
-    {
-        foreach (var inline in inlines)
-        {
-            if (inline is Run run) yield return run;
-            else if (inline is Span span)
-            {
-                foreach (var r in GetRunsFromInlines(span.Inlines)) yield return r;
-            }
-        }
-    }
-
-    private void ApplyHighlights(string term)
-    {
-        if (string.IsNullOrWhiteSpace(term)) return;
-        
-        var viewer = this.FindControl<Control>("MarkdownScrollViewer");
-        if (viewer == null) return;
-
-        var textBlocks = viewer.GetVisualDescendants().OfType<TextBlock>().ToList();
-        foreach (var tb in textBlocks)
-        {
-            if (tb.Inlines != null && tb.Inlines.Count > 0)
-            {
-                ProcessInlinesForHighlight(tb.Inlines, term);
-            }
-            else if (!string.IsNullOrEmpty(tb.Text))
-            {
-                var text = tb.Text;
-                if (text.Contains(term, StringComparison.OrdinalIgnoreCase))
-                {
-                    tb.Text = null;
-                    tb.Inlines = new InlineCollection();
-                    tb.Inlines.Add(new Run(text));
-                    ProcessInlinesForHighlight(tb.Inlines, term);
-                }
-            }
-        }
-    }
-
-    private void ProcessInlinesForHighlight(InlineCollection inlines, string term)
-    {
-        for (int i = 0; i < inlines.Count; i++)
-        {
-            var inline = inlines[i];
-            if (inline is Run run && !string.IsNullOrEmpty(run.Text))
-            {
-                if (run.Background == Brushes.Yellow) continue;
-
-                var text = run.Text;
-                int idx = text.IndexOf(term, StringComparison.OrdinalIgnoreCase);
-                if (idx >= 0)
-                {
-                    inlines.RemoveAt(i);
-                    
-                    int currentIndex = 0;
-                    while (idx >= 0)
-                    {
-                        if (idx > currentIndex)
-                        {
-                            var r = new Run(text.Substring(currentIndex, idx - currentIndex));
-                            inlines.Insert(i++, r);
-                        }
-                        
-                        var matchRun = new Run(text.Substring(idx, term.Length))
-                        {
-                            Background = Brushes.Yellow,
-                            Foreground = Brushes.Black
-                        };
-                        inlines.Insert(i++, matchRun);
-                        
-                        currentIndex = idx + term.Length;
-                        idx = text.IndexOf(term, currentIndex, StringComparison.OrdinalIgnoreCase);
-                    }
-                    if (currentIndex < text.Length)
-                    {
-                        var r = new Run(text.Substring(currentIndex));
-                        inlines.Insert(i, r);
-                    }
-                    else
-                    {
-                        i--; // Ajuste de índice pois não houve sobra no final
-                    }
-                }
-            }
-            else if (inline is Span span)
-            {
-                ProcessInlinesForHighlight(span.Inlines, term);
-            }
-        }
     }
 }

@@ -97,7 +97,14 @@
       `bin/obj/publish/.vs` fora do índice, `git log` mostrando autoria pessoal, hook
       barrando destino corporativo em teste, e o baseline visível no GitHub pessoal.
 
-- [ ] **Fase 2 — Highlight de busca que funciona.** Reescrever `ApplyHighlights` /
+- [x] **Fase 2 — Highlight de busca que funciona.** (feita em 2026-08-12. Medições do
+      arranjo headless: o documento de amostra rende **12 CTextBlock contra 1 TextBlock** —
+      prova numérica de por que o código antigo não pintava nada. Cobertura: **8 de 9**
+      ocorrências; a que escapa é a do **bloco de código cercado**, que o Markdown.Avalonia
+      não renderiza como CTextBlock. Custo medido de `Highlight` em documento de 202 KB /
+      2400 blocos: **~320-480 ms**, o que obrigou a entrar um debounce de 180 ms nesta
+      mesma fatia. Gate visual nos 2 temas com pixels conferidos: destaque `#B8860B` no
+      escuro, `#FFD54F` no claro, zero resíduo após Esc.) Reescrever `ApplyHighlights` /
       `ClearHighlights` sobre `CTextBlock.Content` (`CRun`/`CSpan` de
       ColorTextBlock.Avalonia): coletar os `CTextBlock` da árvore, achar as ocorrências no
       texto renderizado, quebrar os `CRun` nas fronteiras do termo e pintar
@@ -147,13 +154,20 @@
 
 ## Pendências / fios em aberto
 
+- **Busca não alcança blocos de código cercados** (```): o Markdown.Avalonia os renderiza
+  fora de `CTextBlock`. Termo que só existe num bloco de código dá "Sem resultados".
+  Medido na Fase 2 (8 de 9 ocorrências do documento de amostra).
+- **Termo que cruza fronteira de formatação não casa** (buscar `bold` em `**bo**ld`):
+  são runs distintos. Coerente com o contador, mas é uma limitação real.
 - **Feat futura (pedido do usuário):** seletor de fonte e tamanho de texto nas
   preferências, persistido em `settings.json` — fora do escopo deste plano.
 - Persistir e restaurar abas abertas entre execuções (ver Perguntas ao negócio).
 - Remover `Markdig` + `MarkdownService.ConvertToHtml` se não houver plano de exportação.
-- Não existe projeto de testes; a verificação das fases é por build + exercício manual
-  do fluxo. Criar `MarkReader.Tests` para a lógica de busca/abas é candidato a fase extra.
+- Não existe projeto de testes. A Fase 2 verificou por um arranjo headless descartável
+  (Avalonia.Headless linkando `SearchHighlighter.cs`) + automação da janela real por
+  SendKeys com captura de tela. Promover isso a um `MarkReader.Tests` versionado é
+  candidato a fase extra — hoje a verificação não sobrevive à sessão.
 - `error_log.txt` (vazio) na raiz: entra no `.gitignore` na Fase 1; se for artefato de
   runtime, deveria gravar em `%AppData%\MarkReader` junto do `settings.json`.
 
-▶ PRÓXIMO: Fase 2 — highlight de busca sobre CTextBlock
+▶ PRÓXIMO: Fase 3 — navegação entre resultados (marca do corrente + scroll real)
