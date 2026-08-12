@@ -85,7 +85,11 @@
 
 ## Fases (1 fase = 1 /fatia, cada uma com commit verde)
 
-- [ ] **Fase 1 — Base versionada e publicada na conta pessoal.** `.gitignore` (.NET +
+- [x] **Fase 1 — Base versionada e publicada na conta pessoal.** (feita em 2026-08-12 —
+      repo `github.com/PhilipiMagalhaes/Galileo-Reader`, público, branch `main`.
+      Achado da fase: o commit inicial estava assinado com o e-mail corporativo e foi
+      pego pelo próprio hook; história refeita antes de publicar. O repo já existia com
+      README, então o baseline entrou por rebase sobre `origin/main`.) `.gitignore` (.NET +
       `.vs/`, `publish/`, `error_log.txt`), identidade pessoal local, hook `pre-push` de
       guarda, commit do baseline e push para o repositório pessoal. Sem isso não existe
       commit verde nem rollback para as fases seguintes.
@@ -152,4 +156,4 @@
 - `error_log.txt` (vazio) na raiz: entra no `.gitignore` na Fase 1; se for artefato de
   runtime, deveria gravar em `%AppData%\MarkReader` junto do `settings.json`.
 
-▶ PRÓXIMO: Fase 1 — base versionada e publicada na conta pessoal (plano aprovado em 2026-08-12)
+▶ PRÓXIMO: Fase 2 — highlight de busca sobre CTextBlock
