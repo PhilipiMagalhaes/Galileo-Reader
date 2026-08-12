@@ -1,0 +1,231 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:MarkReader.Core.ViewModels"
+        xmlns:md="https://github.com/whistyun/Markdown.Avalonia"
+        x:Class="MarkReader.Desktop.MainWindow"
+        Title="MarkReader"
+        Icon="avares://MarkReader.Desktop/Assets/app-icon.ico"
+        Width="1100" Height="750"
+        MinWidth="700" MinHeight="500"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+
+    <Window.Styles>
+
+        <!-- ── Toolbar Button ─────────────────────────────────── -->
+        <Style Selector="Button.toolbar-btn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        <Style Selector="Button.toolbar-btn:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+        </Style>
+        <Style Selector="Button.toolbar-btn:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListMediumBrush}"/>
+        </Style>
+
+        <!-- ── Search TextBox ─────────────────────────────────── -->
+        <Style Selector="TextBox.search-box">
+            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltHighBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="MinWidth" Value="200"/>
+        </Style>
+
+        <!-- ── Status text ───────────────────────────────────── -->
+        <Style Selector="TextBlock.status">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+        </Style>
+
+        <!-- ── Search nav button ─────────────────────────────── -->
+        <Style Selector="Button.nav-btn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        <Style Selector="Button.nav-btn:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+        </Style>
+
+    </Window.Styles>
+
+    <DockPanel>
+
+        <!-- ═══════════════════════════════════════════════
+             TOOLBAR
+        ════════════════════════════════════════════════════ -->
+        <Border DockPanel.Dock="Top"
+                Padding="12,8"
+                BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+
+                <!-- Left: Open button -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                    <Button Classes="toolbar-btn"
+                            x:Name="OpenButton"
+                            ToolTip.Tip="Abrir arquivo Markdown (Ctrl+O)"
+                            Command="{Binding OpenFileCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="📂" FontSize="16" VerticalAlignment="Center"/>
+                            <TextBlock Text="Abrir" VerticalAlignment="Center" FontWeight="Medium"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- Center: App title -->
+                <StackPanel Grid.Column="1" HorizontalAlignment="Center"
+                            Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="📖" FontSize="18" VerticalAlignment="Center"/>
+                    <TextBlock Text="MarkReader"
+                               FontSize="17" FontWeight="Bold"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                </StackPanel>
+
+                <!-- Right: Search + Theme toggle -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                    <Button Classes="toolbar-btn"
+                            x:Name="SearchToggleButton"
+                            ToolTip.Tip="Buscar no documento (Ctrl+F)"
+                            Command="{Binding ToggleSearchCommand}">
+                        <TextBlock Text="🔍" FontSize="16"/>
+                    </Button>
+                    <Button Classes="toolbar-btn"
+                            x:Name="ThemeButton"
+                            ToolTip.Tip="Alternar tema claro/escuro (Ctrl+T)"
+                            Command="{Binding ToggleThemeCommand}">
+                        <TextBlock x:Name="ThemeIcon" Text="🌙" FontSize="16"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ═══════════════════════════════════════════════
+             STATUS BAR
+        ════════════════════════════════════════════════════ -->
+        <Border DockPanel.Dock="Bottom"
+                Padding="14,5"
+                BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+            <Grid ColumnDefinitions="*,Auto,Auto">
+                <TextBlock Grid.Column="0" Classes="status" Text="{Binding StatusMessage}"/>
+                <TextBlock Grid.Column="1" Classes="status" Margin="0,0,16,0"
+                           Text="{Binding FileName}"
+                           IsVisible="{Binding FileName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                <TextBlock Grid.Column="2" Classes="status"
+                           Text="{Binding FileSizeText}"
+                           IsVisible="{Binding FileSizeText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </Grid>
+        </Border>
+
+        <!-- ═══════════════════════════════════════════════
+             SEARCH BAR (collapsible)
+        ════════════════════════════════════════════════════ -->
+        <Border DockPanel.Dock="Bottom"
+                IsVisible="{Binding IsSearchVisible}"
+                Padding="12,8"
+                BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                Background="{DynamicResource SystemControlPageBackgroundAltHighBrush}">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto">
+
+                <TextBlock Grid.Column="0" Text="Buscar:" VerticalAlignment="Center"
+                           FontWeight="Medium" Margin="0,0,8,0" FontSize="13"/>
+
+                <TextBox Grid.Column="1"
+                         Classes="search-box"
+                         x:Name="SearchBox"
+                         Text="{Binding SearchQuery, Mode=TwoWay}"
+                         Watermark="Digite para buscar…"
+                         MaxWidth="400"/>
+
+                <!-- result count -->
+                <TextBlock Grid.Column="2"
+                           Text="{Binding SearchCountText}"
+                           VerticalAlignment="Center"
+                           Margin="10,0"
+                           FontSize="13"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+
+                <!-- prev / next -->
+                <Button Grid.Column="3"
+                        Classes="nav-btn"
+                        ToolTip.Tip="Resultado anterior (Shift+Enter)"
+                        Command="{Binding PreviousResultCommand}">
+                    <TextBlock Text="◀" FontSize="13"/>
+                </Button>
+                <Button Grid.Column="4"
+                        Classes="nav-btn"
+                        ToolTip.Tip="Próximo resultado (Enter)"
+                        Command="{Binding NextResultCommand}">
+                    <TextBlock Text="▶" FontSize="13"/>
+                </Button>
+
+                <!-- close -->
+                <Button Grid.Column="5"
+                        Classes="nav-btn"
+                        ToolTip.Tip="Fechar busca (Esc)"
+                        Command="{Binding CloseSearchCommand}"
+                        Margin="8,0,0,0">
+                    <TextBlock Text="✕" FontSize="13"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- ═══════════════════════════════════════════════
+             MAIN CONTENT AREA
+        ════════════════════════════════════════════════════ -->
+        <Grid>
+            <!-- Drop zone / empty state -->
+            <Border x:Name="EmptyState"
+                    IsVisible="{Binding MarkdownContent, Converter={x:Static StringConverters.IsNullOrEmpty}}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel Spacing="16" HorizontalAlignment="Center">
+                    <TextBlock Text="📄" FontSize="64" HorizontalAlignment="Center"
+                               Opacity="0.4"/>
+                    <TextBlock Text="Abra um arquivo Markdown"
+                               FontSize="22" FontWeight="Light"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                    <TextBlock Text="Clique em 📂 Abrir ou arraste um arquivo .md para cá"
+                               FontSize="14" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"/>
+                    <Button HorizontalAlignment="Center"
+                            Padding="20,10"
+                            CornerRadius="8"
+                            Command="{Binding OpenFileCommand}">
+                        <TextBlock Text="Abrir arquivo…" FontWeight="Medium"/>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <!-- Markdown viewer -->
+            <ScrollViewer x:Name="ContentScrollViewer"
+                          IsVisible="{Binding MarkdownContent, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                          HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+                <md:MarkdownScrollViewer x:Name="MarkdownScrollViewer"
+                              Markdown="{Binding MarkdownContent}"
+                              Margin="40,32"
+                              MaxWidth="860"
+                              HorizontalAlignment="Center"
+                />
+            </ScrollViewer>
+        </Grid>
+
+    </DockPanel>
+</Window>

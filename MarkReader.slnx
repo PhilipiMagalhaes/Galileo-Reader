@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MarkReader.Core/MarkReader.Core.csproj" />
+    <Project Path="src/MarkReader.Desktop/MarkReader.Desktop.csproj" />
+  </Folder>
+</Solution>

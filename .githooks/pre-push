@@ -1,0 +1,62 @@
+#!/bin/sh
+#
+# Guarda de push — este repositório é PESSOAL.
+#
+# Bloqueia duas formas de vazamento:
+#   1. push para qualquer destino que não seja a conta pessoal no GitHub;
+#   2. commits assinados com e-mail corporativo indo para o repositório pessoal.
+#
+# Ativado por: git config --local core.hooksPath .githooks
+# Para pular em um push específico (consciente): git push --no-verify
+
+DONO_PERMITIDO="PhilipiMagalhaes"
+DOMINIOS_BLOQUEADOS="vibetecnologia\.com|vibedesenvolvimento|dev\.azure\.com"
+
+url_remoto="$2"
+
+# ── 1. destino ───────────────────────────────────────
+if ! printf '%s' "$url_remoto" | grep -Eiq "github\.com[:/]${DONO_PERMITIDO}/"; then
+    echo "" >&2
+    echo "PUSH BLOQUEADO — destino fora da conta pessoal." >&2
+    echo "  destino:   $url_remoto" >&2
+    echo "  permitido: github.com/${DONO_PERMITIDO}/*" >&2
+    echo "" >&2
+    exit 1
+fi
+
+if printf '%s' "$url_remoto" | grep -Eiq "$DOMINIOS_BLOQUEADOS"; then
+    echo "" >&2
+    echo "PUSH BLOQUEADO — destino corporativo: $url_remoto" >&2
+    echo "" >&2
+    exit 1
+fi
+
+# ── 2. autoria dos commits ───────────────────────────
+vazio="0000000000000000000000000000000000000000"
+
+while read -r ref_local sha_local ref_remoto sha_remoto; do
+    [ "$sha_local" = "$vazio" ] && continue
+
+    if [ "$sha_remoto" = "$vazio" ]; then
+        intervalo="$sha_local --not --remotes"
+    else
+        intervalo="$sha_remoto..$sha_local"
+    fi
+
+    # shellcheck disable=SC2086
+    suspeitos=$(git log --format='%ae%n%ce' $intervalo 2>/dev/null | sort -u \
+                | grep -Ei "$DOMINIOS_BLOQUEADOS")
+
+    if [ -n "$suspeitos" ]; then
+        echo "" >&2
+        echo "PUSH BLOQUEADO — commits com identidade corporativa em $ref_local:" >&2
+        echo "$suspeitos" | sed 's/^/  /' >&2
+        echo "" >&2
+        echo "Corrija a identidade local e reescreva a autoria antes de publicar:" >&2
+        echo "  git config --local user.email philipimagalhaes@gmail.com" >&2
+        echo "" >&2
+        exit 1
+    fi
+done
+
+exit 0
