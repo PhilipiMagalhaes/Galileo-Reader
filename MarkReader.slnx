@@ -2,5 +2,6 @@
   <Folder Name="/src/">
     <Project Path="src/MarkReader.Core/MarkReader.Core.csproj" />
     <Project Path="src/MarkReader.Desktop/MarkReader.Desktop.csproj" />
+    <Project Path="src/MarkReader.Tests/MarkReader.Tests.csproj" />
   </Folder>
 </Solution>

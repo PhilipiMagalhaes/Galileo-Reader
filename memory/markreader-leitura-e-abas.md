@@ -163,10 +163,10 @@
   preferências, persistido em `settings.json` — fora do escopo deste plano.
 - Persistir e restaurar abas abertas entre execuções (ver Perguntas ao negócio).
 - Remover `Markdig` + `MarkdownService.ConvertToHtml` se não houver plano de exportação.
-- Não existe projeto de testes. A Fase 2 verificou por um arranjo headless descartável
-  (Avalonia.Headless linkando `SearchHighlighter.cs`) + automação da janela real por
-  SendKeys com captura de tela. Promover isso a um `MarkReader.Tests` versionado é
-  candidato a fase extra — hoje a verificação não sobrevive à sessão.
+- Existe `src/MarkReader.Tests` (xunit + Avalonia.Headless.XUnit, 7 testes) cobrindo o
+  destaque de busca sobre markdown renderizado de verdade, incluindo a guarda de
+  regressão do bug original (CTextBlock × TextBlock). O gate visual da janela real
+  continua manual, por automação SendKeys + captura de tela no scratchpad.
 - `error_log.txt` (vazio) na raiz: entra no `.gitignore` na Fase 1; se for artefato de
   runtime, deveria gravar em `%AppData%\MarkReader` junto do `settings.json`.
 
