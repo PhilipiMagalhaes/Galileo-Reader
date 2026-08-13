@@ -185,7 +185,24 @@
       *Pronto quando:* abrir um arquivo novo estando no meio de outro mostra o topo do
       novo documento; alternar entre duas abas preserva a posição de cada uma.
 
-- [ ] **Fase 6 — Paleta e tipografia de leitura.** `ResourceDictionary` por variant com
+- [x] **Fase 6 — Paleta e tipografia de leitura.** (feita em 2026-08-12. Tokens semânticos
+      por variant (`Reader*Brush`), Inter aplicada de fato (era registrada em `Program.cs` e
+      nunca usada), corpo 16px / entrelinha 26 (1,6), escala de títulos, e `MaxWidth`
+      860 → 680 pela medida de ~70 caracteres. **20 pares de contraste medidos por script
+      WCAG, todos dentro do alvo** — corpo em AAA (13,2:1 escuro / 15,1:1 claro), demais
+      textos em AA, separadores e distinção entre destaques ≥ 3:1.
+      A medição pegou **dois defeitos em cores já commitadas nas fases 2 e 3**: no escuro o
+      destaque de busca dava 3,25:1 (reprovava AA) e a marca corrente separava-se da normal
+      por 1,51:1 — hoje 6,51:1 e 3,53:1.
+      O revisor **desmontou o pacote** e derrubou minha hipótese sobre por que os estilos de
+      `CCode`/`CHyperlink` não pegavam: não é valor local nem ordem de aplicação — o estilo
+      embutido entra em `Styles[0]` e usa seletor **descendente-com-classe**
+      (`.Markdown_Avalonia_MarkdownViewer CCode`). Trocada a forma do seletor, tudo passou a
+      seguir o tema; confirmado por pixel nos dois temas, com o azul velho `#7272FF`
+      (2,74:1) em **zero pixels**.
+      O arranjo de captura passou a usar `PrintWindow`: o Windows recusa
+      `SetForegroundWindow` depois de muita automação, e `CopyFromScreen` capturaria a
+      janela de outro programa.) `ResourceDictionary` por variant com
       tokens semânticos (fundo, texto, texto secundário, borda, link, fundo de código,
       citação, destaque de busca, destaque corrente) substituindo os brushes soltos do
       `App.axaml`; `MarkdownStyle` cobrindo títulos, parágrafo, código, citação, tabela e
@@ -209,6 +226,12 @@
   exata dentro do bloco não está acessível. Num parágrafo mais alto que a viewport, a
   ocorrência corrente pode ficar fora da área visível mesmo com o bloco à vista — o
   critério da Fase 3 ("sempre dentro da área visível") vale para blocos de altura normal.
+- **Ritmo vertical dos títulos não entrou**: o estilo embutido dá a mesma margem a título
+  e parágrafo, então um H1 de 28px respira como um parágrafo. Espaçamento pesa tanto quanto
+  o corpo numa tela de leitura.
+- **Pares do chrome fora do conjunto medido**: contorno do campo de busca e estados de
+  hover ainda vêm de pinceis do Fluent. A tira de abas ganhou traço de acento na aba ativa
+  (o degrau de fundo sozinho era 1,1:1), mas o resto do chrome não foi medido.
 - **Abas não têm limite e cada uma segura um documento parseado e vivo** — é o preço
   explícito de não re-parsear ao trocar de aba (Fase 4). Com muitos arquivos grandes
   abertos isso pesa; não há teto nem descarte.
@@ -229,4 +252,5 @@
 - `error_log.txt` (vazio) na raiz: entra no `.gitignore` na Fase 1; se for artefato de
   runtime, deveria gravar em `%AppData%\MarkReader` junto do `settings.json`.
 
-▶ PRÓXIMO: Fase 6 — paleta e tipografia de leitura
+▶ PRÓXIMO: plano concluído — as 6 fases estão fechadas. Próximo movimento é decidir
+  a frente seguinte (ver Perguntas ao negócio e Pendências).

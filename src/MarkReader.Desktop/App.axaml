@@ -3,32 +3,65 @@
              x:Class="MarkReader.Desktop.App"
              RequestedThemeVariant="Light">
 
+    <!--
+        Paleta de leitura por tokens semânticos. Todas as razões de contraste abaixo foram
+        medidas (WCAG 2.2): corpo em AAA (>= 7:1), demais textos em AA (>= 4:1), separadores
+        e a distinção entre destaques em >= 3:1 (1.4.11). Ver o registro da Fase 6 em
+        memory/markreader-leitura-e-abas.md.
+    -->
     <Application.Resources>
         <ResourceDictionary>
+            <!-- Inter é registrada em Program.cs (.WithInterFont) mas não era aplicada em
+                 lugar nenhum: o app rodava na fonte padrão do sistema. -->
+            <FontFamily x:Key="InterFont">fonts:Inter#Inter</FontFamily>
+
             <ResourceDictionary.ThemeDictionaries>
+
                 <ResourceDictionary x:Key="Light">
-                    <!-- Destaque de busca: âmbar sobre texto quase preto (paleta definitiva na fase 6) -->
+                    <!-- Quase-branco em vez de branco puro: reduz o ofuscamento na leitura longa -->
+                    <SolidColorBrush x:Key="ReaderBackgroundBrush" Color="#FAFAF9" />
+                    <SolidColorBrush x:Key="ReaderSurfaceBrush" Color="#F0EFEC" />
+                    <SolidColorBrush x:Key="ReaderForegroundBrush" Color="#1F2328" />
+                    <SolidColorBrush x:Key="ReaderMutedBrush" Color="#57606A" />
+                    <!-- 3,19:1 contra a superfície e 3,51:1 contra o fundo: o par de dentro é o que aperta -->
+                    <SolidColorBrush x:Key="ReaderBorderBrush" Color="#8A857C" />
+                    <SolidColorBrush x:Key="ReaderQuoteBrush" Color="#0A58CA" />
+                    <SolidColorBrush x:Key="ReaderLinkBrush" Color="#0A58CA" />
+                    <SolidColorBrush x:Key="ReaderCodeBrush" Color="#953800" />
+
                     <SolidColorBrush x:Key="SearchHighlightBrush" Color="#FFD54F" />
                     <SolidColorBrush x:Key="SearchHighlightForegroundBrush" Color="#1F2328" />
-                    <!-- Ocorrência corrente: laranja escuro com texto claro. A inversão de
-                         luminosidade é a pista, não a matiz — âmbar × laranja se confundem
-                         em protanopia/deuteranopia. 3,70:1 contra o âmbar, 5,22:1 do texto. -->
+                    <!-- Ocorrência corrente: a pista é a inversão de luminosidade, não a matiz —
+                         âmbar e laranja se confundem em protanopia/deuteranopia. -->
                     <SolidColorBrush x:Key="SearchCurrentBrush" Color="#C2410C" />
                     <SolidColorBrush x:Key="SearchCurrentForegroundBrush" Color="#FFFFFF" />
+
+                    <!-- Aliases do chrome Fluent apontando para os tokens, para não derivarem -->
+                    <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#FAFAF9" />
+                    <SolidColorBrush x:Key="SystemControlPageBackgroundAltHighBrush" Color="#F0EFEC" />
                 </ResourceDictionary>
 
-                <!-- Ajuste do Tema Escuro para um cinza mais suave (estilo Windows) em vez de preto puro -->
                 <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#202020" />
-                    <SolidColorBrush x:Key="SystemControlPageBackgroundAltHighBrush" Color="#2B2B2B" />
-                    <SolidColorBrush x:Key="SystemControlBackgroundBaseLowBrush" Color="#333333" />
-                    <!-- Amarelo puro fere no escuro: âmbar rebaixado mantém a marca visível sem ofuscar -->
-                    <SolidColorBrush x:Key="SearchHighlightBrush" Color="#B8860B" />
+                    <!-- Cinza em vez de preto puro: menos halo no texto claro -->
+                    <SolidColorBrush x:Key="ReaderBackgroundBrush" Color="#1E1F22" />
+                    <SolidColorBrush x:Key="ReaderSurfaceBrush" Color="#2A2C31" />
+                    <SolidColorBrush x:Key="ReaderForegroundBrush" Color="#E6E6E3" />
+                    <SolidColorBrush x:Key="ReaderMutedBrush" Color="#A8AEB8" />
+                    <SolidColorBrush x:Key="ReaderBorderBrush" Color="#727A86" />
+                    <SolidColorBrush x:Key="ReaderQuoteBrush" Color="#7EB6FF" />
+                    <SolidColorBrush x:Key="ReaderLinkBrush" Color="#7EB6FF" />
+                    <SolidColorBrush x:Key="ReaderCodeBrush" Color="#FFA657" />
+
+                    <!-- Âmbar rebaixado: o #B8860B anterior dava só 3,25:1 com texto branco -->
+                    <SolidColorBrush x:Key="SearchHighlightBrush" Color="#7A5800" />
                     <SolidColorBrush x:Key="SearchHighlightForegroundBrush" Color="#FFFFFF" />
-                    <!-- Ocorrência corrente: mais clara que as demais, para saltar no escuro -->
-                    <SolidColorBrush x:Key="SearchCurrentBrush" Color="#E8A33D" />
+                    <SolidColorBrush x:Key="SearchCurrentBrush" Color="#F0B457" />
                     <SolidColorBrush x:Key="SearchCurrentForegroundBrush" Color="#1A1400" />
+
+                    <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#1E1F22" />
+                    <SolidColorBrush x:Key="SystemControlPageBackgroundAltHighBrush" Color="#2A2C31" />
                 </ResourceDictionary>
+
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
     </Application.Resources>

@@ -42,9 +42,9 @@ public class SearchHighlighterTests
 
     /// <summary>Paleta de um "outro tema", para exercitar o repintar da troca de tema.</summary>
     private static readonly SearchPalette OutraPaleta = new(
-        new SolidColorBrush(Color.Parse("#B8860B")),
+        new SolidColorBrush(Color.Parse("#7A5800")),
         new SolidColorBrush(Colors.White),
-        new SolidColorBrush(Color.Parse("#E8A33D")),
+        new SolidColorBrush(Color.Parse("#F0B457")),
         new SolidColorBrush(Color.Parse("#1A1400")));
 
     [AvaloniaFact]
