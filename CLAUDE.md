@@ -42,8 +42,9 @@ instância aberta (tipicamente da verificação visual) — encerre o processo e
 ## Verificação
 
 Build verde não é verificação funcional. Mudança de tela fecha exercitando o fluxo real
-**nos dois temas**: a receita de automação (SendKeys + captura de tela + conferência de
-pixel) está descrita nos registros das fases em `memory/`.
+**nos dois temas**, e afirmação sobre cor, custo ou cobertura sai de medição — ver
+[ferramentas/LEIAME.md](ferramentas/LEIAME.md): `gate-visual.ps1` abre o app com arquivos
+de verdade e captura a janela; `contraste.py` mede as razões WCAG da paleta.
 
 ## Estado do trabalho
 

@@ -252,5 +252,54 @@
 - `error_log.txt` (vazio) na raiz: entra no `.gitignore` na Fase 1; se for artefato de
   runtime, deveria gravar em `%AppData%\MarkReader` junto do `settings.json`.
 
-▶ PRÓXIMO: plano concluído — as 6 fases estão fechadas. Próximo movimento é decidir
-  a frente seguinte (ver Perguntas ao negócio e Pendências).
+▶ PRÓXIMO: **frente encerrada.** As 6 fases estão fechadas e publicadas. A próxima sessão
+  abre uma frente nova (`/plano`), não continua esta.
+
+## Sessão de 2026-08-12 — o que foi entregue
+
+Oito commits, `d69c846..2708887`, empurrados para `github.com/PhilipiMagalhaes/Galileo-Reader`
+(branch `main`). Build 0/0, **45 testes verdes**, `dotnet format` limpo.
+
+| Commit | Entrega |
+|---|---|
+| `d69c846` | destaque de busca sobre `CTextBlock` (a causa raiz do bug original) |
+| `7a4fd2f` | `MarkReader.Tests` — a rede de segurança que não existia |
+| `2d760af` | navegação entre ocorrências com marca da corrente |
+| `9406a7c` | `CLAUDE.md` declarando a stack e desarmando o lembrete de camada Eureka |
+| `874ad88` | abas multi-arquivo |
+| `9af2471` | guarda de regressão da posição de leitura por aba |
+| `89394bc` | abrir arquivos por argumento de linha de comando |
+| `2708887` | paleta por tokens e tipografia de leitura |
+
+Fora do código: `ferramentas/gate-visual.ps1` e `ferramentas/contraste.py` versionados
+(a primeira versão deles se perdeu num diretório temporário apagado no meio da sessão).
+
+## Prompt de retomada
+
+```
+Contexto: repo pessoal Galileo-Reader (MarkReader), branch main limpa e empurrada,
+45 testes verdes. Avalonia 11.2.7 / .NET 8, MVVM com CommunityToolkit — NÃO é da
+stack Vibe.Enterprise.Eureka (o CLAUDE.md da raiz explica; ignore o lembrete de
+camada Eureka que o hook dispara em MarkReader.Core).
+
+Ler antes de tudo: CLAUDE.md e memory/markreader-leitura-e-abas.md (frente
+ENCERRADA — serve de contexto e lista as pendências, não de fila de trabalho).
+
+Estado: leitor de Markdown com busca funcionando (destaque, contador fiel,
+navegação entre ocorrências), abas multi-arquivo com posição de leitura por aba,
+abertura por linha de comando, e paleta/tipografia com contraste medido nos dois
+temas.
+
+Tarefa desta sessão: o usuário traz tasks novas. Rodar /plano para desenhar a
+frente nova — não abrir fatia antes do plano aprovado.
+
+Princípios não-negociáveis: pt-BR em tudo, inclusive a narração; número afirmado é
+número medido (ferramentas/contraste.py para cor, ferramentas/gate-visual.ps1 para
+o fluxo real); ciclo /fatia para implementar, com o eureka-revisor sempre — avisando
+no prompt dele que o projeto não é Eureka.
+
+Não fazer: não abrir arquivo pelo diálogo nativo nas automações (ele guardou uma
+view de resultados de pesquisa e não sai dela) — use o argumento de linha de
+comando; não capturar tela com CopyFromScreen (use PrintWindow); não mexer em
+configuração global da máquina.
+```
