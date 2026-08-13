@@ -6,22 +6,19 @@ namespace MarkReader.Tests;
 
 public class MainViewModelTests : IDisposable
 {
-    private readonly string _pasta;
+    private readonly PastaTemporaria _pasta = new("markreader-abas");
     private readonly SearchViewFake _busca = new();
     private readonly MainViewModel _vm;
 
     public MainViewModelTests()
     {
-        _pasta = Path.Combine(Path.GetTempPath(), "markreader-testes-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_pasta);
-
         _vm = new MainViewModel(new MarkdownServiceFake(), new SettingsServiceFake());
         _vm.AttachSearchView(_busca);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_pasta)) Directory.Delete(_pasta, recursive: true);
+        _pasta.Dispose();
         GC.SuppressFinalize(this);
     }
 
@@ -178,7 +175,7 @@ public class MainViewModelTests : IDisposable
     [Fact]
     public async Task Arquivo_inexistente_nao_cria_aba_e_reporta_no_status()
     {
-        await _vm.LoadFileAsync(Path.Combine(_pasta, "nao-existe.md"));
+        await _vm.LoadFileAsync(_pasta.CaminhoDe("nao-existe.md"));
 
         Assert.Empty(_vm.OpenDocuments);
         Assert.StartsWith("Erro ao abrir arquivo", _vm.StatusMessage);
@@ -194,28 +191,7 @@ public class MainViewModelTests : IDisposable
 
     // ── apoio ────────────────────────────────────────────────────────
 
-    private string Arquivo(string nome, string conteudo)
-    {
-        var caminho = Path.Combine(_pasta, nome);
-        File.WriteAllText(caminho, conteudo);
-        return caminho;
-    }
-
-    private sealed class MarkdownServiceFake : IMarkdownService
-    {
-        public string LoadMarkdown(string filePath) => File.ReadAllText(filePath);
-
-        public string ConvertToHtml(string markdown) => markdown;
-    }
-
-    private sealed class SettingsServiceFake : ISettingsService
-    {
-        public bool IsDarkTheme { get; set; }
-
-        public void Save() { }
-
-        public void Load() { }
-    }
+    private string Arquivo(string nome, string conteudo) => _pasta.Escrever(nome, conteudo);
 
     private sealed class SearchViewFake : IDocumentSearchView
     {

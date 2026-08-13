@@ -65,7 +65,10 @@
 - **Busca é por documento ativo** (Ctrl+F busca na aba da frente), estado zerado ao
   trocar de aba.
 - Alvo de contraste: **AA (4.5:1) como piso e AAA (7:1) para o corpo do texto**, medido e
-  registrado na fase 5 (WCAG 2.2, critérios 1.4.3/1.4.6; entrelinha 1.5+ vem do 1.4.12).
+  registrado na **Fase 6** (WCAG 2.2, critérios 1.4.3/1.4.6; entrelinha 1.5+ vem do 1.4.12).
+- **Um visualizador vivo por aba é invariante que sustenta duas fases** (4 e 5): virtualizar
+  a lista de abas descartaria os viewers de fundo e a posição de leitura sumiria junto.
+  Fixado por teste (`Toda_aba_aberta_tem_seu_visualizador_realizado`).
 - **O projeto é pessoal e vai para `github.com/PhilipiMagalhaes`, público.** A máquina tem
   identidade global corporativa (`philipi.magalhaes@vibetecnologia.com`), duas contas
   GitHub salvas (`PhilipiMagalhaes` = pessoal, `Philipi-Magalhaes` = a outra) e credenciais
@@ -156,7 +159,18 @@
       *Pronto quando:* abrir 3 arquivos dá 3 abas nomeadas, ✕ e Ctrl+W fecham a certa,
       reabrir um já aberto só troca de aba, e a busca opera sobre a aba da frente.
 
-- [ ] **Fase 5 — Volta ao topo / memória de posição.** Aba **nova** abre no topo
+- [x] **Fase 5 — Volta ao topo / memória de posição.** (feita em 2026-08-12, **sem código
+      de produção**. O teste-primeiro provou que o comportamento já cai do desenho da
+      Fase 4 — um `ScrollViewer` vivo por aba, escondido em vez de destruído. O critério
+      original desta fase ("offset zerado depois do layout, para o re-measure não restaurar
+      a posição") descrevia o mundo de **um viewer compartilhado**, que a decisão da Fase 4
+      aposentou; implementá-lo ao pé da letra teria **quebrado** a metade "restaura" do
+      próprio critério. A entrega é a guarda de regressão: `ReadingPositionTests`, 6 testes
+      sobre a `MainWindow` real em headless. O revisor mediu os dentes dela por mutação —
+      trocar o `ItemsControl` por `ContentControl` derruba 2 testes; zerar o offset a cada
+      troca de aba derruba 3 — e achou um ponto cego: com a regressão escrita via
+      `Dispatcher.Post` a suíte ficava 100% verde. Corrigido drenando a fila do dispatcher
+      no arranjo; reinjetei a mutação e ela agora derruba 3 testes.) Aba **nova** abre no topo
       (offset zerado depois do layout, para o re-measure não restaurar a posição
       anterior); voltar para uma aba já aberta **restaura** onde a leitura parou.
       *Pronto quando:* abrir um arquivo novo estando no meio de outro mostra o topo do
@@ -195,11 +209,17 @@
   preferências, persistido em `settings.json` — fora do escopo deste plano.
 - Persistir e restaurar abas abertas entre execuções (ver Perguntas ao negócio).
 - Remover `Markdig` + `MarkdownService.ConvertToHtml` se não houver plano de exportação.
-- Existe `src/MarkReader.Tests` (xunit + Avalonia.Headless.XUnit, 7 testes) cobrindo o
-  destaque de busca sobre markdown renderizado de verdade, incluindo a guarda de
-  regressão do bug original (CTextBlock × TextBlock). O gate visual da janela real
-  continua manual, por automação SendKeys + captura de tela no scratchpad.
+- `src/MarkReader.Tests` (xunit + Avalonia.Headless.XUnit): **35 testes** cobrindo o
+  destaque e a navegação da busca, a lógica de abas e a posição de leitura por aba.
+- **A automação do gate visual por SendKeys está quebrada para abrir arquivos.** O diálogo
+  nativo do Windows guardou uma view de "resultados de pesquisa" para este app e não sai
+  dela: nem digitar o caminho completo no campo Nome, nem navegar pela barra de endereços
+  (Alt+D) resolveram — o arquivo vem "não encontrado" e a captura registra o diálogo, não
+  o app. Enquanto isso durar, fluxo que dependa de **abrir arquivo** não tem gate visual.
+  Saída provável: dar ao app um **argumento de linha de comando** para abrir arquivos
+  (`MarkReader.Desktop.exe caminho.md`) — útil por si (duplo clique no Explorer) e torna o
+  gate determinístico. Candidato a fatia própria.
 - `error_log.txt` (vazio) na raiz: entra no `.gitignore` na Fase 1; se for artefato de
   runtime, deveria gravar em `%AppData%\MarkReader` junto do `settings.json`.
 
-▶ PRÓXIMO: Fase 5 — aba nova abre no topo, aba já aberta restaura a posição
+▶ PRÓXIMO: Fase 6 — paleta e tipografia de leitura

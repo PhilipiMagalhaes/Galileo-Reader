@@ -34,6 +34,8 @@ instância aberta (tipicamente da verificação visual) — encerre o processo e
 
 - Nomes de tipos e membros em **inglês**; textos de usuário, comentários e mensagens de
   commit em **pt-BR**. Commits no padrão `tipo(escopo): descrição`.
+  **Exceção:** no projeto de testes os nomes são em pt-BR — o nome de um teste é a frase
+  que descreve o comportamento, e vale mais legível do que uniforme.
 - `MarkReader.Core` **não** referencia Avalonia. O que precisa da árvore visual entra por
   uma porta no Core implementada pelo Desktop — ver `IDocumentSearchView`.
 
