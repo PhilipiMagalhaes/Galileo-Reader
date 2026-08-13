@@ -88,6 +88,15 @@
 
 ## Fases (1 fase = 1 /fatia, cada uma com commit verde)
 
+- [x] **Fase 4.1 — Abrir arquivos por linha de comando** (fatia extra, 2026-08-12).
+      Não estava no plano: entrou porque o gate visual da Fase 5 ficou sem como abrir
+      arquivo. `MarkReader.Desktop.exe a.md b.md` abre uma aba por arquivo — e de quebra o
+      duplo clique num `.md` no Explorer passa a funcionar. Achado do revisor, verificado
+      empiricamente por ele em .NET 8: a checagem de duplicata rodava **fora** do
+      `try/catch` e `Path.GetFullPath("")` lança, então um argumento vazio derrubava o app
+      na inicialização a partir do lambda do dispatcher. `LoadFileAsync` virou total e os
+      argumentos passam por um seletor (`FilePathArguments`) que descarta vazios e opções.
+
 - [x] **Fase 1 — Base versionada e publicada na conta pessoal.** (feita em 2026-08-12 —
       repo `github.com/PhilipiMagalhaes/Galileo-Reader`, público, branch `main`.
       Achado da fase: o commit inicial estava assinado com o e-mail corporativo e foi
@@ -211,14 +220,12 @@
 - Remover `Markdig` + `MarkdownService.ConvertToHtml` se não houver plano de exportação.
 - `src/MarkReader.Tests` (xunit + Avalonia.Headless.XUnit): **35 testes** cobrindo o
   destaque e a navegação da busca, a lógica de abas e a posição de leitura por aba.
-- **A automação do gate visual por SendKeys está quebrada para abrir arquivos.** O diálogo
-  nativo do Windows guardou uma view de "resultados de pesquisa" para este app e não sai
-  dela: nem digitar o caminho completo no campo Nome, nem navegar pela barra de endereços
-  (Alt+D) resolveram — o arquivo vem "não encontrado" e a captura registra o diálogo, não
-  o app. Enquanto isso durar, fluxo que dependa de **abrir arquivo** não tem gate visual.
-  Saída provável: dar ao app um **argumento de linha de comando** para abrir arquivos
-  (`MarkReader.Desktop.exe caminho.md`) — útil por si (duplo clique no Explorer) e torna o
-  gate determinístico. Candidato a fatia própria.
+- **O diálogo nativo de abrir arquivo não serve para automação**: guardou uma view de
+  "resultados de pesquisa" para este app e não sai dela (nem caminho completo no campo
+  Nome, nem barra de endereços). Resolvido por fora — o app agora aceita arquivos por
+  **argumento de linha de comando**, e o gate visual usa isso. O arranjo reutilizável é
+  `gate.ps1` no scratchpad da sessão (lança o app com os arquivos, garante primeiro plano
+  antes de cada captura, tem `Teclas` e `RolarParaBaixo`).
 - `error_log.txt` (vazio) na raiz: entra no `.gitignore` na Fase 1; se for artefato de
   runtime, deveria gravar em `%AppData%\MarkReader` junto do `settings.json`.
 

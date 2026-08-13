@@ -242,8 +242,7 @@ public partial class MainWindow : Window, IDocumentSearchView
             .OfType<string>()
             .Where(IsMarkdownFile);
 
-        foreach (var path in dropped)
-            await _viewModel.LoadFileAsync(path);
+        await _viewModel.LoadFilesAsync(dropped);
     }
 
     private static bool IsMarkdownFile(string path)

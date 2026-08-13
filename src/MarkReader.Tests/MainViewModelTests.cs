@@ -182,6 +182,72 @@ public class MainViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Abrir_uma_lista_de_arquivos_cria_uma_aba_por_arquivo_na_ordem()
+    {
+        await _vm.LoadFilesAsync(new[]
+        {
+            Arquivo("a.md", "# A"),
+            Arquivo("b.md", "# B"),
+            Arquivo("c.md", "# C")
+        });
+
+        Assert.Equal(new[] { "a.md", "b.md", "c.md" }, _vm.OpenDocuments.Select(documento => documento.FileName));
+        Assert.Equal("c.md", _vm.SelectedDocument?.FileName);
+    }
+
+    [Fact]
+    public async Task Um_caminho_ruim_na_lista_nao_impede_os_demais()
+    {
+        await _vm.LoadFilesAsync(new[]
+        {
+            Arquivo("a.md", "# A"),
+            _pasta.CaminhoDe("nao-existe.md"),
+            Arquivo("c.md", "# C")
+        });
+
+        Assert.Equal(new[] { "a.md", "c.md" }, _vm.OpenDocuments.Select(documento => documento.FileName));
+    }
+
+    [Fact]
+    public async Task Argumento_em_branco_nao_derruba_nem_cria_aba()
+    {
+        // Path.GetFullPath lança para vazio e para só-espaços; vindo de um lambda de
+        // dispatcher, exceção não observada mataria o app na inicialização.
+        await _vm.LoadFilesAsync(new[] { string.Empty, "   ", Arquivo("a.md", "# A") });
+
+        Assert.Single(_vm.OpenDocuments);
+        Assert.Equal("a.md", _vm.SelectedDocument?.FileName);
+    }
+
+    [Fact]
+    public async Task Lista_vazia_nao_muda_nada()
+    {
+        await _vm.LoadFilesAsync(Array.Empty<string>());
+
+        Assert.Empty(_vm.OpenDocuments);
+        Assert.False(_vm.HasActiveDocument);
+    }
+
+    [Theory]
+    [InlineData("--dark")]
+    [InlineData("-v")]
+    [InlineData("/gate")]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Argumento_que_nao_e_caminho_de_arquivo_e_descartado(string argumento)
+    {
+        Assert.Empty(MainViewModel.FilePathArguments(new[] { argumento }));
+    }
+
+    [Fact]
+    public void Caminho_inexistente_passa_para_virar_erro_visivel()
+    {
+        var inexistente = _pasta.CaminhoDe("nao-existe.md");
+
+        Assert.Equal(new[] { inexistente }, MainViewModel.FilePathArguments(new[] { inexistente }));
+    }
+
+    [Fact]
     public void Buscar_sem_documento_aberto_nao_abre_a_barra()
     {
         _vm.ToggleSearch();

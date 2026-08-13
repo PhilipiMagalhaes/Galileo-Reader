@@ -93,15 +93,18 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public async Task LoadFileAsync(string path)
     {
-        if (OpenDocuments.FirstOrDefault(document => document.HasPath(path)) is { } alreadyOpen)
-        {
-            SelectedDocument = alreadyOpen;
-            StatusMessage = $"Já aberto: {alreadyOpen.FileName}";
-            return;
-        }
-
+        // Tudo dentro do try: normalizar o caminho já lança para string vazia ou só espaços,
+        // e um caminho ruim tem de virar mensagem de status, nunca exceção — quem chama
+        // pode ser um lambda de dispatcher, onde exceção não observada mata o app.
         try
         {
+            if (OpenDocuments.FirstOrDefault(document => document.HasPath(path)) is { } alreadyOpen)
+            {
+                SelectedDocument = alreadyOpen;
+                StatusMessage = $"Já aberto: {alreadyOpen.FileName}";
+                return;
+            }
+
             var content = await Task.Run(() => _markdownService.LoadMarkdown(path));
             var document = new DocumentViewModel(path, content, new FileInfo(path).Length);
 
@@ -114,6 +117,27 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = $"Erro ao abrir arquivo: {ex.Message}";
         }
     }
+
+    /// <summary>
+    /// Abre uma sequência de arquivos em abas, em ordem — usado pelos argumentos de linha de
+    /// comando e por arrastar vários arquivos de uma vez. A última aberta fica à frente;
+    /// caminho que falha vira mensagem de status e não interrompe os demais.
+    /// </summary>
+    public async Task LoadFilesAsync(IEnumerable<string> paths)
+    {
+        foreach (var path in paths)
+            await LoadFileAsync(path);
+    }
+
+    /// <summary>
+    /// Dos argumentos de linha de comando, os que são candidatos a caminho de arquivo.
+    /// Descarta vazios e o que parece opção (<c>-x</c>, <c>/x</c>) — se um dia houver opções
+    /// de verdade, é aqui que elas se separam. Caminho inexistente <b>passa</b> de propósito:
+    /// vira erro visível na barra de status em vez de sumir calado.
+    /// </summary>
+    public static IEnumerable<string> FilePathArguments(IEnumerable<string> args) =>
+        args.Where(argument => !string.IsNullOrWhiteSpace(argument))
+            .Where(argument => !argument.StartsWith('-') && !argument.StartsWith('/'));
 
     [RelayCommand]
     public void CloseDocument(DocumentViewModel? document)
